@@ -1,0 +1,105 @@
+---
+title: "A simple evolutionary algorithm"
+output: 
+  html_document: 
+    keep_md: yes
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    collapsed: false
+    theme: default
+  pdf_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r}
+library(ggplot2)    # (Wickham, 2009)
+library(cowplot) 
+```
+
+In the beginnning, there was a function... to optimize against.
+
+For this example, we'll use the sine function to describe our 'fitness landscape'.
+
+```{r}
+CalcFitness <- function(x) {
+  return(sin(x))
+}
+```
+
+```{r}
+# Plot the fitness landscape
+ggplot(data.frame(x=c(-10,10)), aes(x)) +
+  stat_function(fun=CalcFitness, geom="line") +
+  xlab("X") + ylab("Fitness") + ggtitle("Sine Function Fitness Landscape")
+```
+
+```{r}
+# Define a few parameters
+pop_size <- 1000
+generations <- 100
+tournament_size <- 2
+```
+
+```{r}
+population <- runif(pop_size, min=-20, max=20)
+```
+
+```{r}
+# Plot the initial population
+ggplot(data.frame(x=population, fitness=CalcFitness(population)), aes(x=x,y=fitness,color=fitness)) +
+  geom_point() +
+  stat_function(fun=CalcFitness, geom="line", n=10000) +
+  scale_color_gradient() +
+  xlab("X") + ylab("Fitness") + ggtitle("Initial Population")
+```
+
+```{r}
+
+TournamentSelect <- function(population, tourny_size, fit_fun) {
+  # Gather the tournament participants!
+  combatants <- sample(population, size=tourny_size, replace=TRUE)
+  # Who wins?
+  best_i <- which.max(fit_fun(combatants))
+  # Return the winner
+  return(combatants[best_i])
+}
+
+Mutate <- function(x, min_x=-20, max_x=20) {
+  new_x <- x
+  if (rbinom(1, size=1, prob=0.1) == 1) {
+    new_x <- new_x + rnorm(1, mean=0, sd=0.05*pi)  
+  }
+  return(new_x)
+}
+
+Evolve <- function(population, generations) {
+  for (gen in 1:generations) {
+    # Evaluate! ==> Because evaluations in this case are so fast, we're going to
+    #               evaluate candidate solutions 'on-the-fly' during selection.
+    # Select parents!
+    #   - Asexual reproduction, tournament selection, no elitism!
+    new_population <- rep(0.0, length(population)) # Create a place to store the new population
+    for (i in 1:length(new_population)) {
+      # Hold a tournament for this position!
+      new_population[i] <- TournamentSelect(population,tournament_size,CalcFitness)
+      # Mutate the new offspring
+      new_population[i] <- Mutate(new_population[i])
+    }
+    # Current population = new offspring
+    population <- new_population
+  }
+  return(population);
+}
+```
+
+```{r}
+evolved_population <- Evolve(population, 100)
+# Plot the initial population
+ggplot(data.frame(x=evolved_population, fitness=CalcFitness(evolved_population)), aes(x=x,y=fitness,color=fitness)) +
+  geom_point() + xlim(-20, 20) +
+  stat_function(fun=CalcFitness, geom="line", n=10000) +
+  scale_color_gradient() +
+  xlab("X") + ylab("Fitness") + ggtitle("Evolved Population")
+```
