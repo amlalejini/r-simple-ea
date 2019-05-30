@@ -26,7 +26,8 @@ output:
 
 First, we'll load a few useful libraries:
 
-```{r, message=FALSE}
+
+```r
 library(ggplot2)    # (Wickham, 2009)
 library(cowplot)    # (Wilke, 2018)
 ```
@@ -42,7 +43,8 @@ In this example, we'll evolve a population of _individuals_ where each individua
 
 In R:
 
-```{r}
+
+```r
 calc_fitness <- function(x) {
   return(sin(x))
 }
@@ -50,17 +52,21 @@ calc_fitness <- function(x) {
 
 Using ggplot, we can visualize our fitness function:
 
-```{r}
+
+```r
 # Plot the 'sine' fitness landscape (-10 <= x <= 10)
 ggplot(data.frame(x = c(-10, 10)), aes(x)) +
   stat_function(fun = calc_fitness, geom = "line", n=10000) +
   xlab("X") + ylab("Fitness") + ggtitle("Sine Function Fitness Landscape")
 ```
 
+![](simple-ea_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 
 For this simple evolutionary algorithm, we need to set a few parameters:
 
-```{r}
+
+```r
 pop_size <- 100
 generations <- 100
 tournament_size <- 2
@@ -69,24 +75,26 @@ max_indiv_value <- 20
 min_indiv_value <- -20
 ```
 
-- `pop_size` (`r pop_size`): How many individuals are present in the population at any given time?
-- `generations` (`r generations`): How many generations (rounds) of evolution will we run our evolutionary algorithm for?
-- `tournament_size` (`r tournament_size`): When selecting parents to reproduce, how large should tournaments be?
-- `mutation_rate` (`r mutation_rate`): With what probability should we mutate offspring?
-- `max_indiv_value` (`r max_indiv_value`): What is the maximum value we allow individuals to be?
-- `min_indiv_value` (`r min_indiv_value`): What is the minimum value we allow individuals to be?
+- `pop_size` (100): How many individuals are present in the population at any given time?
+- `generations` (100): How many generations (rounds) of evolution will we run our evolutionary algorithm for?
+- `tournament_size` (2): When selecting parents to reproduce, how large should tournaments be?
+- `mutation_rate` (0.1): With what probability should we mutate offspring?
+- `max_indiv_value` (20): What is the maximum value we allow individuals to be?
+- `min_indiv_value` (-20): What is the minimum value we allow individuals to be?
 
 #### Generating an initial population
 
 Before jumping into the evolution loop of an evolutionary algorithm, we want to generate an initial population. To start, we'll generate random individuals for our initial population.
 
-```{r}
+
+```r
 population <- runif(pop_size, min=min_indiv_value, max=max_indiv_value)
 ```
 
 How fit is our initial population? We can use ggplot to plot our random initial population in our sine fitness landscape.
 
-```{r}
+
+```r
 # Plot the initial population
 ggplot(data.frame(x = population, fitness = calc_fitness(population)), aes(x = x,y = fitness, color = fitness)) +
   geom_point() +
@@ -94,6 +102,8 @@ ggplot(data.frame(x = population, fitness = calc_fitness(population)), aes(x = x
   scale_color_gradient() +
   xlab("X") + ylab("Fitness") + ggtitle("Initial Population")
 ```
+
+![](simple-ea_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 #### Selecting parents
 
@@ -105,7 +115,8 @@ One simple parent selection algorithm is tournament selection. To select a paren
 
 In R:
 
-```{r}
+
+```r
 # Params:
 # - pop: the population of individuals from which to select a parent
 # - fit_fun: a fitness function that takes an individual as input and returns that individual's fitness
@@ -132,7 +143,8 @@ tournament_select <- function(pop, fit_fun, tourny_size, tourny_cnt) {
 
 ##### Roulette selection
 
-```{r}
+
+```r
 roulette_select <- function(pop, fit_fun, cnt) {
   fitnesses <- fit_fun(pop)
   # not perfect way to get weights, but avoids division by 0 and higher fitnesses have higher weights
@@ -143,7 +155,8 @@ roulette_select <- function(pop, fit_fun, cnt) {
 
 #### Mutating offspring
 
-```{r}
+
+```r
 mutate <- function(x, mut_prob, min_x=-20, max_x=20, sd=0.005*pi) {
   # Flip a biased coin
   # if heads (prob=mut_prob): mutate
@@ -155,53 +168,70 @@ mutate <- function(x, mut_prob, min_x=-20, max_x=20, sd=0.005*pi) {
 }
 ```
 
-Let's look at how this mutation operator moves genomes in the fitness landscape by generating a bunch of mutated offspring of the individual `x=0` with a mutation rate of `r mutation_rate`.
+Let's look at how this mutation operator moves genomes in the fitness landscape by generating a bunch of mutated offspring of the individual `x=0` with a mutation rate of 0.1.
 
-```{r}
+
+```r
 parents <- rep(0, 1000)
 mutants_mut_rate_0.1 <- sapply(parents, mutate, 0.1)
 ```
 
 Plot all of the mutants in our landscape.
 
-```{r}
+
+```r
 ggplot(data.frame(x = mutants_mut_rate_0.1, fitness = calc_fitness(mutants_mut_rate_0.1)), aes(x = x, y = fitness, color = fitness)) +
   geom_point() +
   stat_function(fun = calc_fitness, geom = "line", n = 10000) +
   xlim(-20, 20) +
   scale_color_gradient() +
   xlab("X") + ylab("Fitness") + ggtitle("Mutants! (Mutation rate = 0.1)")
+```
 
+![](simple-ea_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+```r
 # distribution of mutants
 ggplot(data.frame(x = mutants_mut_rate_0.1), aes(x = x)) +
   geom_histogram(bins=10) +
   xlab("X") + ylab("Count") + ggtitle("Distribution of mutanted individuals")
 ```
 
+![](simple-ea_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
+
 What if we increase the step size of our mutation rate?
 
-```{r}
+
+```r
 parents <- rep(0, 1000)
 mutants_mut_rate_0.1 <- sapply(parents, mutate, 0.1, -20, 20, 0.5*pi)
 ```
 
-```{r}
+
+```r
 ggplot(data.frame(x = mutants_mut_rate_0.1, fitness = calc_fitness(mutants_mut_rate_0.1)), aes(x = x, y = fitness, color = fitness)) +
   geom_point() +
   stat_function(fun = calc_fitness, geom = "line", n = 10000) +
   xlim(-20, 20) +
   scale_color_gradient() +
   xlab("X") + ylab("Fitness") + ggtitle("Mutants! (Mutation rate = 0.1)")
+```
 
+![](simple-ea_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+```r
 # distribution of mutants
 ggplot(data.frame(x = mutants_mut_rate_0.1), aes(x = x)) +
   geom_histogram(bins=10) +
   xlab("X") + ylab("Count") + ggtitle("Distribution of mutanted individuals")
 ```
 
+![](simple-ea_files/figure-html/unnamed-chunk-13-2.png)<!-- -->
+
 #### Evolution!
 
-```{r}
+
+```r
 evolve_tourny <- function(population, generations) {
   for (gen in 1:generations) {
     # Evaluate! ==> Because evaluations in this case are so fast, we're going to
@@ -241,7 +271,8 @@ evolve_roulette <- function(population, generations) {
 
 Evolve w/tournament selection:
 
-```{r}
+
+```r
 pop_evo_tourny <- evolve_tourny(population, 10)
 # Plot the initial population
 ggplot(data.frame(x=pop_evo_tourny, fitness=calc_fitness(pop_evo_tourny)), aes(x=x,y=fitness,color=fitness)) +
@@ -251,9 +282,12 @@ ggplot(data.frame(x=pop_evo_tourny, fitness=calc_fitness(pop_evo_tourny)), aes(x
   xlab("X") + ylab("Fitness") + ggtitle("Evolved Population (w/tournament selection)")
 ```
 
+![](simple-ea_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+
 Evolve with roulette selection:
 
-```{r}
+
+```r
 pop_evo_roulette <- evolve_tourny(population, 10)
 # Plot the initial population
 ggplot(data.frame(x=pop_evo_roulette, fitness=calc_fitness(pop_evo_roulette)), aes(x=x,y=fitness,color=fitness)) +
@@ -262,3 +296,5 @@ ggplot(data.frame(x=pop_evo_roulette, fitness=calc_fitness(pop_evo_roulette)), a
   scale_color_gradient() +
   xlab("X") + ylab("Fitness") + ggtitle("Evolved Population (w/roulette selection)")
 ```
+
+![](simple-ea_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
